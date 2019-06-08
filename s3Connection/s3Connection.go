@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"io"
 	"log"
-	"os"
 )
 
 type S3Connection struct {
@@ -43,29 +42,23 @@ func (s3Conn *S3Connection) UploadFile(bucketName string, s3FilePath string, fil
 	return nil
 }
 
-func (s3Conn *S3Connection) DownloadFile(bucketName string, s3FilePath string, localFilePath string) error {
+func (s3Conn *S3Connection) DownloadFileToMemory(bucketName string, s3FilePath string) ([]byte, error) {
+	// Create a buffer in memory to store the binary data
+	buffer := &aws.WriteAtBuffer{}
 
-	// Create a local file in which the downloaded data will be written
-	file, err := os.Create(localFilePath)
-	if err != nil {
-		log.Printf("Unable to create local file %s to write data to. %s", localFilePath, err)
-		return err
-	}
-	defer file.Close()
-
-	// Download the file from S3
-	_, err = s3Conn.downloader.Download(file,
+	// Download the file from S3 to the buffer
+	_, err := s3Conn.downloader.Download(buffer,
 		&s3.GetObjectInput{
 			Bucket: aws.String(bucketName),
 			Key:    aws.String(s3FilePath),
 		})
 	if err != nil {
 		log.Printf("Unable to download file %s from bucket %s. %s", s3FilePath, bucketName, err)
-		return err
+		return nil, err
 	}
 
 	// Success so no error to return
-	return nil
+	return buffer.Bytes(), nil
 }
 
 func (s3Conn *S3Connection) DeleteFile(bucketName string, s3FilePath string) error {

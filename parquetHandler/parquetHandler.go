@@ -1,6 +1,7 @@
 package parquetHandler
 
 import (
+	"github.com/kine-dmd/s3-lambda-consumer/appleWatch3Row"
 	"github.com/xitongsys/parquet-go/ParquetFile"
 	"github.com/xitongsys/parquet-go/ParquetWriter"
 	"github.com/xitongsys/parquet-go/parquet"
@@ -13,7 +14,7 @@ type ParquetFileHandler struct {
 	writer *ParquetWriter.ParquetWriter
 }
 
-func MakeParquetFile(filePath string, rowType interface{}) (*ParquetFileHandler, error) {
+func MakeParquetFile(filePath string) (*ParquetFileHandler, error) {
 	// Create a file to write to
 	fileWriter, err := ParquetFile.NewLocalFileWriter(filePath)
 	if err != nil {
@@ -23,7 +24,7 @@ func MakeParquetFile(filePath string, rowType interface{}) (*ParquetFileHandler,
 
 	// Create a file writer for that file
 	cpuThreads := int64(runtime.NumCPU())
-	parquetWriter, err := ParquetWriter.NewParquetWriter(fileWriter, rowType, cpuThreads)
+	parquetWriter, err := ParquetWriter.NewParquetWriter(fileWriter, new(appleWatch3Row.AppleWatch3Row), cpuThreads)
 	if err != nil {
 		log.Println("Unable to create parquet writer ", err)
 		return nil, err
@@ -42,7 +43,7 @@ func MakeParquetFile(filePath string, rowType interface{}) (*ParquetFileHandler,
 	return parqFile, nil
 }
 
-func (parqFileHandler *ParquetFileHandler) WriteData(allData []interface{}) error {
+func (parqFileHandler *ParquetFileHandler) WriteData(allData []appleWatch3Row.AppleWatch3Row) error {
 	// Write each row to the file
 	for _, row := range allData {
 		err := parqFileHandler.writer.Write(row)
