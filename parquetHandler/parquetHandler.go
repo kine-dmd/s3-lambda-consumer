@@ -1,6 +1,7 @@
 package parquetHandler
 
 import (
+	"bytes"
 	"github.com/kine-dmd/s3-lambda-consumer/appleWatch3Row"
 	"github.com/xitongsys/parquet-go/ParquetFile"
 	"github.com/xitongsys/parquet-go/ParquetWriter"
@@ -9,22 +10,13 @@ import (
 	"runtime"
 )
 
-type ParquetFileHandler struct {
-	file   ParquetFile.ParquetFile
-	writer *ParquetWriter.ParquetWriter
-}
-
-func MakeParquetFile(filePath string) (*ParquetFileHandler, error) {
-	// Create a file to write to
-	fileWriter, err := ParquetFile.NewLocalFileWriter(filePath)
-	if err != nil {
-		log.Println("Unable to create parquet file ", err)
-		return nil, err
-	}
+func ConvertToParquetFile(allData []appleWatch3Row.AppleWatch3Row) ([]byte, error) {
+	// Create an in memory parquet file
+	inMem := makeInMemoryParquetFile()
 
 	// Create a file writer for that file
 	cpuThreads := int64(runtime.NumCPU())
-	parquetWriter, err := ParquetWriter.NewParquetWriter(fileWriter, new(appleWatch3Row.AppleWatch3Row), cpuThreads)
+	parquetWriter, err := ParquetWriter.NewParquetWriter(inMem, new(appleWatch3Row.AppleWatch3Row), cpuThreads)
 	if err != nil {
 		log.Println("Unable to create parquet writer ", err)
 		return nil, err
@@ -34,44 +26,59 @@ func MakeParquetFile(filePath string) (*ParquetFileHandler, error) {
 	parquetWriter.RowGroupSize = 128 * 1024 * 1024 // 128 MB
 	parquetWriter.CompressionType = parquet.CompressionCodec_SNAPPY
 
-	// Save for use
-	parqFile := new(ParquetFileHandler)
-	parqFile.writer = parquetWriter
-	parqFile.file = fileWriter
-
-	// No errors to return
-	return parqFile, nil
-}
-
-func (parqFileHandler *ParquetFileHandler) WriteData(allData []appleWatch3Row.AppleWatch3Row) error {
 	// Write each row to the file
 	for _, row := range allData {
-		err := parqFileHandler.writer.Write(row)
+		err := parquetWriter.Write(row)
 		if err != nil {
 			log.Println("Error writing row to file ", err, row)
-			return err
+			return nil, err
 		}
 	}
 
+	// Write footer to parquet file
+	err = parquetWriter.WriteStop()
+	if err != nil {
+		log.Println("Unable to write footer to Parquet file ", err)
+		return nil, err
+	}
+
 	// Success - no error to return
+	return inMem.getData(), nil
+}
+
+/** An in memory parquet file to avoid writing to disk. Manually implements methods not provided by composition. **/
+type inMemoryParquetFile struct {
+	data   []byte
+	reader *bytes.Reader
+	*bytes.Reader
+	*bytes.Buffer
+}
+
+func makeInMemoryParquetFile() inMemoryParquetFile {
+	inMemFile := inMemoryParquetFile{}
+	inMemFile.data = []byte{}
+	inMemFile.reader = bytes.NewReader(inMemFile.data)
+	inMemFile.Reader = inMemFile.reader
+	inMemFile.Buffer = bytes.NewBuffer(inMemFile.data)
+	return inMemFile
+}
+
+func (pqf inMemoryParquetFile) Open(name string) (ParquetFile.ParquetFile, error) {
+	return pqf, nil
+}
+
+func (pqf inMemoryParquetFile) Read(b []byte) (int, error) {
+	return pqf.reader.Read(b)
+}
+
+func (pqf inMemoryParquetFile) Create(name string) (ParquetFile.ParquetFile, error) {
+	return pqf, nil
+}
+
+func (pqf inMemoryParquetFile) Close() error {
 	return nil
 }
 
-func (parqFileHandler *ParquetFileHandler) CloseFile() error {
-	// Write footer to parquet file
-	err := parqFileHandler.writer.WriteStop()
-	if err != nil {
-		log.Println("Unable to write footer to Parquet file ", err)
-		return err
-	}
-
-	// Close the file itself
-	err = parqFileHandler.file.Close()
-	if err != nil {
-		log.Println("Unable to close Parquet file ", err)
-		return err
-	}
-
-	// Success - no error to return
-	return nil
+func (pqf inMemoryParquetFile) getData() []byte {
+	return pqf.Buffer.Bytes()
 }

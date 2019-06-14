@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"github.com/aws/aws-lambda-go/events"
@@ -10,8 +11,6 @@ import (
 	"github.com/kine-dmd/s3-lambda-consumer/s3Connection"
 	"log"
 	"math"
-	"os"
-	"time"
 )
 
 const (
@@ -35,22 +34,13 @@ func lambdaMain(_ context.Context, event events.S3Event) {
 	s3Conn := s3Connection.MakeS3Connection()
 	binaryData, _ := s3Conn.DownloadFileToMemory(bucketName, filePath)
 
-	// Parse the binaryData
+	// Parse the binaryData and then convert it to parquet
 	parsedData := decodeBinaryData(binaryData)
-
-	// Make a parquet file to write the binaryData to
-	localTempFilePath := "/tmp/" + string(time.Now().UnixNano())
-	pqFile, _ := parquetHandler.MakeParquetFile(localTempFilePath)
-	_ = pqFile.WriteData(parsedData)
-	_ = pqFile.CloseFile()
-
-	// Open the parquet file for reading
-	f, _ := os.Open(localTempFilePath)
-	defer f.Close()
+	parquetData, _ := parquetHandler.ConvertToParquetFile(parsedData)
 
 	// Strip the .bin extension and replace with .parquet and upload file
 	parquetFilePath := filePath[:len(filePath)-4] + ".parquet"
-	_ = s3Conn.UploadFile("kine-dmd", parquetFilePath, f)
+	_ = s3Conn.UploadFile("kine-dmd", parquetFilePath, bytes.NewReader(parquetData))
 
 	// Delete the intermediary file from the S3 bucket
 	_ = s3Conn.DeleteFile(bucketName, filePath)
