@@ -44,7 +44,7 @@ func (s3Conn *S3Connection) UploadFile(bucketName string, s3FilePath string, fil
 
 func (s3Conn *S3Connection) DownloadFileToMemory(bucketName string, s3FilePath string) ([]byte, error) {
 	// Create a buffer in memory to store the binary data
-	buffer := &aws.WriteAtBuffer{}
+	buffer := aws.NewWriteAtBuffer([]byte{})
 
 	// Download the file from S3 to the buffer
 	_, err := s3Conn.downloader.Download(buffer,
