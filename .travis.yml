@@ -1,0 +1,30 @@
+language: go
+
+go:
+  - 1.10.x
+
+before_install:
+  - wget -O dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
+  - echo '287b08291e14f1fae8ba44374b26a2b12eb941af3497ed0ca649253e21ba2f83  dep' | sha256sum -c -
+  - chmod +x dep
+
+install:
+  - ./dep ensure
+
+after_success:
+  - GOOS=linux GOARCH=amd64 go build -o main.lambdaMain main.go
+  - zip main.zip main.lambdaMain
+
+deploy:
+  provider: lambda
+  function_name: "apple-watch-3-s3-consumer"
+  region: "eu-west-2"
+  role: "arn:aws:lambda:eu-west-2:736634562271:function:apple-watch-3-s3-consumer"
+  runtime: "go1.x"
+  handler_name: "lambdaMain"
+  module_name: "main"
+  timeout: 60
+  zip: "main.zip"
+  memory_size: 256
+  on:
+    branch: master
