@@ -19,7 +19,7 @@ deploy:
   provider: lambda
   function_name: "apple-watch-3-s3-consumer"
   region: "eu-west-2"
-  role: "arn:aws:lambda:eu-west-2:736634562271:function:apple-watch-3-s3-consumer"
+  role: "arn:aws:iam::736634562271:user/lambda-deploy"
   runtime: "go1.x"
   handler_name: "lambdaMain"
   module_name: "main"
