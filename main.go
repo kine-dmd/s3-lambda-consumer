@@ -11,6 +11,7 @@ import (
 	"github.com/kine-dmd/s3-lambda-consumer/s3Connection"
 	"log"
 	"math"
+	"runtime"
 )
 
 const (
@@ -30,13 +31,13 @@ func lambdaMain(_ context.Context, event events.S3Event) {
 		return
 	}
 
-	// Make an S3 connection for donwloads and uploads
+	// Make an S3 connection for downloads and uploads
 	s3Conn := s3Connection.MakeS3Connection()
 	binaryData, _ := s3Conn.DownloadFileToMemory(bucketName, filePath)
 
 	// Parse the binaryData and then convert it to parquet
 	parsedData := decodeBinaryData(binaryData)
-	parquetData, _ := parquetHandler.ConvertToParquetFile(parsedData)
+	parquetData, _ := parquetHandler.ConvertToParquetFile(parsedData, runtime.NumCPU())
 
 	// Strip the .bin extension and replace with .parquet and upload file
 	parquetFilePath := filePath[:len(filePath)-4] + ".parquet"
@@ -47,6 +48,7 @@ func lambdaMain(_ context.Context, event events.S3Event) {
 }
 
 func getFileLocation(event events.S3Event) (string, string) {
+	// Extract the bucket name and file path from the lambda event object that it is invoked with
 	bucketName := event.Records[0].S3.Bucket.Name
 	filePath := event.Records[0].S3.Object.Key
 	return bucketName, filePath
