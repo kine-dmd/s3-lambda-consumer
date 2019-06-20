@@ -30,7 +30,7 @@ func lambdaMain(_ context.Context, event events.S3Event) {
 		return
 	}
 
-	// Make an S3 connection for donwloads and uploads
+	// Make an S3 connection for downloads and uploads
 	s3Conn := s3Connection.MakeS3Connection()
 	binaryData, _ := s3Conn.DownloadFileToMemory(bucketName, filePath)
 
@@ -47,6 +47,7 @@ func lambdaMain(_ context.Context, event events.S3Event) {
 }
 
 func getFileLocation(event events.S3Event) (string, string) {
+	// Extract the bucket name and file path from the lambda event object that it is invoked with
 	bucketName := event.Records[0].S3.Bucket.Name
 	filePath := event.Records[0].S3.Object.Key
 	return bucketName, filePath
