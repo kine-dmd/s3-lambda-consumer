@@ -33,18 +33,30 @@ func lambdaMain(_ context.Context, event events.S3Event) {
 
 	// Make an S3 connection for downloads and uploads
 	s3Conn := s3Connection.MakeS3Connection()
-	binaryData, _ := s3Conn.DownloadFileToMemory(bucketName, filePath)
+	binaryData, err := s3Conn.DownloadFileToMemory(bucketName, filePath)
+	if err != nil {
+		log.Fatalf("Unable to download file %s from S3: %s", filePath, err)
+	}
 
 	// Parse the binaryData and then convert it to parquet
 	parsedData := decodeBinaryData(binaryData)
-	parquetData, _ := parquetHandler.ConvertToParquetFile(parsedData, runtime.NumCPU())
+	parquetData, err := parquetHandler.ConvertToParquetFile(parsedData, runtime.NumCPU())
+	if err != nil {
+		log.Fatalf("Unable to convert file %s to parquet: %s", filePath, err)
+	}
 
 	// Strip the .bin extension and replace with .parquet and upload file
 	parquetFilePath := filePath[:len(filePath)-4] + ".parquet"
-	_ = s3Conn.UploadFile("kine-dmd", parquetFilePath, bytes.NewReader(parquetData))
+	err = s3Conn.UploadFile("kine-dmd", parquetFilePath, bytes.NewReader(parquetData))
+	if err != nil {
+		log.Fatalf("Unable to uploaded converted file %s to S3: %s", parquetFilePath, err)
+	}
 
 	// Delete the intermediary file from the S3 bucket
-	_ = s3Conn.DeleteFile(bucketName, filePath)
+	err = s3Conn.DeleteFile(bucketName, filePath)
+	if err != nil {
+		log.Printf("Unable to remove intermediary file %s from S#: %s", parquetFilePath, err)
+	}
 }
 
 func getFileLocation(event events.S3Event) (string, string) {
