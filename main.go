@@ -11,6 +11,7 @@ import (
 	"github.com/kine-dmd/s3-lambda-consumer/s3Connection"
 	"log"
 	"math"
+	"runtime"
 )
 
 const (
@@ -36,7 +37,7 @@ func lambdaMain(_ context.Context, event events.S3Event) {
 
 	// Parse the binaryData and then convert it to parquet
 	parsedData := decodeBinaryData(binaryData)
-	parquetData, _ := parquetHandler.ConvertToParquetFile(parsedData)
+	parquetData, _ := parquetHandler.ConvertToParquetFile(parsedData, runtime.NumCPU())
 
 	// Strip the .bin extension and replace with .parquet and upload file
 	parquetFilePath := filePath[:len(filePath)-4] + ".parquet"

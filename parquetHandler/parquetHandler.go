@@ -7,16 +7,17 @@ import (
 	"github.com/xitongsys/parquet-go/ParquetWriter"
 	"github.com/xitongsys/parquet-go/parquet"
 	"log"
-	"runtime"
 )
 
-func ConvertToParquetFile(allData []appleWatch3Row.AppleWatch3Row) ([]byte, error) {
+/* Convert the rows to an in-memory parquet file.
+   Note: greater concurrency (up to number of CPUs) usually results in faster transformation but produces larger files.
+*/
+func ConvertToParquetFile(allData []appleWatch3Row.AppleWatch3Row, concurrency int) ([]byte, error) {
 	// Create an in memory parquet file
 	inMem := makeInMemoryParquetFile()
 
 	// Create a file writer for that file
-	cpuThreads := int64(runtime.NumCPU())
-	parquetWriter, err := ParquetWriter.NewParquetWriter(inMem, new(appleWatch3Row.AppleWatch3Row), cpuThreads)
+	parquetWriter, err := ParquetWriter.NewParquetWriter(inMem, new(appleWatch3Row.AppleWatch3Row), int64(concurrency))
 	if err != nil {
 		log.Println("Unable to create parquet writer ", err)
 		return nil, err
