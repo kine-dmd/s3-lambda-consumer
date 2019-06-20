@@ -75,9 +75,10 @@ func BenchmarkParquetFile1hr(b *testing.B) {
 }
 
 func benchmarkParquetFile(numRows int, b *testing.B) {
+	// Make some fixed number of rows.
 	rows := MakeRandomRows(numRows)
 
-	// Repeat the process of generating rows until stable time convergence
+	// Repeat the process of converting rows until stable time convergence
 	for n := 0; n < b.N; n++ {
 		_, _ = ConvertToParquetFile(rows)
 	}
@@ -94,7 +95,7 @@ func compareResults(t *testing.T, err error, expected []byte, actual []byte) {
 		t.Fatalf("Expected result length not equal to actual. Expected length %d. Got length %d.", len(expected), len(actual))
 	}
 
-	for i := 0; i < len(expected); i++ {
+	for i := range expected {
 		if expected[i] != actual[i] {
 			t.Fatalf("Byte %d does not match. Expected %b, got %b", i, expected[i], actual[i])
 		}
