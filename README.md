@@ -4,6 +4,6 @@ The S3 lambda consumer is designed to be triggered when a binary file is written
 ![s3Lambda](https://user-images.githubusercontent.com/26333869/60193618-e4249b80-982f-11e9-8cf5-1df49b7adfb6.png)
 
 
-This lambda function must be compiled and deployed to AWS lambda with the configuration shown below. This is done automatically through Travis CI when commits are merged to master.
+This lambda function must be compiled and deployed to AWS lambda with the configuration shown below. This is done automatically through Travis CI when commits are merged to master. Master is a protected branch and cannot be pushed to directly.
 ![lambdaConsole](https://user-images.githubusercontent.com/26333869/60192869-8fccec00-982e-11e9-995b-47771acadd21.png)
 
